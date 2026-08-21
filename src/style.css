@@ -65,3 +65,23 @@ body {
   color: #ec4899;
   font-weight: bold;
 }
+
+.debug-panel {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  min-width: 200px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  text-align: left;
+  color: #fff;
+}
+
+.debug-panel h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+}

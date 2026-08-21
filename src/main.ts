@@ -5,10 +5,10 @@ import { isTileBuilt } from "./grid";
 import { nextLumbermillCost, nextMineCost, canAfford, VILLAGE_CENTER_COST, type Cost } from "./resources";
 import { canPlaceDecoration, DECORATION_COSTS } from "./decorations";
 import type { Decoration } from "./state";
+import { loadState, loadDebugMode, saveDebugMode } from "./persistence";
 
 // İskelet: faz/zamanlayıcı + kaynak/bina mantığının test edilebildiği minimal bir arayüz.
-// localStorage kaydı henüz yok — bir sonraki adım.
-const state = createInitialState();
+const state = loadState() ?? createInitialState();
 const session = new SessionManager(state);
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -33,10 +33,11 @@ app.innerHTML = `
     <button id="decorate-fence-btn"></button>
     <button id="decorate-path-btn"></button>
     <button id="decorate-lamp-btn"></button>
-    <button id="stop-btn">Durdur</button>
-    <button id="reset-btn">Sıfırla</button>
+    <button id="stop-btn" title="Aktif pomodoro/molayı iptal edip idle'a döner. İlerlemeye (kaynak, bina, harita, kayıt) dokunmaz.">Durdur</button>
+    <button id="new-game-btn" title="Kayıtlı oyunu tamamen siler; kaynaklar, binalar, harita ve faz baştan başlar.">Yeni Oyun</button>
     <p id="village-status" class="village-status"></p>
   </div>
+  <div id="debug-panel" class="debug-panel"></div>
 `;
 
 const timerEl = document.querySelector<HTMLDivElement>("#timer")!;
@@ -53,11 +54,18 @@ const decorateFenceBtn = document.querySelector<HTMLButtonElement>("#decorate-fe
 const decoratePathBtn = document.querySelector<HTMLButtonElement>("#decorate-path-btn")!;
 const decorateLampBtn = document.querySelector<HTMLButtonElement>("#decorate-lamp-btn")!;
 const stopBtn = document.querySelector<HTMLButtonElement>("#stop-btn")!;
-const resetBtn = document.querySelector<HTMLButtonElement>("#reset-btn")!;
+const newGameBtn = document.querySelector<HTMLButtonElement>("#new-game-btn")!;
+const debugPanelEl = document.querySelector<HTMLDivElement>("#debug-panel")!;
 const debugToggle = document.querySelector<HTMLInputElement>("#debug-toggle")!;
+
+// Debug modu tercihi GameState'ten ayrı, kendi localStorage anahtarında kalıcı (bkz. persistence.ts).
+debugToggle.checked = loadDebugMode();
+session.setDebugMode(debugToggle.checked);
 
 debugToggle.addEventListener("change", () => {
   session.setDebugMode(debugToggle.checked);
+  saveDebugMode(debugToggle.checked);
+  render(); // debug paneli göster/gizle — debug modu GameState'in parçası değil, notify() tetiklemiyor
 });
 
 startBtn.addEventListener("click", () => {
@@ -93,12 +101,12 @@ decorateLampBtn.addEventListener("click", () => {
   session.buildDecoration("lamp");
 });
 
-resetBtn.addEventListener("click", () => {
-  session.resetPomodoroCount();
-});
-
 stopBtn.addEventListener("click", () => {
   session.stopToIdle();
+});
+
+newGameBtn.addEventListener("click", () => {
+  session.newGame();
 });
 
 function formatElapsed(ms: number): string {
@@ -185,6 +193,45 @@ function renderDecorationButton(btn: HTMLButtonElement, type: Decoration, inLong
   btn.disabled = !canAfford(state, cost) || !canPlaceDecoration(state);
 }
 
+// Tek bir "İsim: maliyet" satırı — karşılanabiliyorsa yeşil, değilse gri. cost null ise "max" yazar.
+function debugCostLine(label: string, cost: Cost | null): string {
+  if (cost === null) {
+    return `<div>${label}: max</div>`;
+  }
+  const color = canAfford(state, cost) ? "#4caf50" : "#999";
+  return `<div style="color:${color}">${label}: ${costLabel(cost)}</div>`;
+}
+
+// Sadece debug modunda görünen, sağ üstte sabit duran maliyet listesi — planlama/test kolaylığı için,
+// üretim arayüzünün parçası değil.
+function renderDebugPanel() {
+  if (!debugToggle.checked) {
+    debugPanelEl.style.display = "none";
+    return;
+  }
+
+  const { lumbermill, mine, villageCenter } = state.buildings;
+  const lines: string[] = [];
+
+  lines.push(debugCostLine(`Lumbermill (Lv${lumbermill.level})`, nextLumbermillCost(state)));
+  lines.push(debugCostLine(`Mine (Lv${mine.level})`, nextMineCost(state)));
+
+  if (!villageCenter.unlocked) {
+    lines.push(`<div>Köy Merkezi: harita bitince açılır</div>`);
+  } else if (villageCenter.built) {
+    lines.push(`<div>Köy Merkezi: inşa edildi</div>`);
+  } else {
+    lines.push(debugCostLine("Köy Merkezi", VILLAGE_CENTER_COST));
+  }
+
+  for (const type of Object.keys(DECORATION_COSTS) as Decoration[]) {
+    lines.push(debugCostLine(DECORATION_LABELS[type], DECORATION_COSTS[type]));
+  }
+
+  debugPanelEl.style.display = "block";
+  debugPanelEl.innerHTML = `<h3>Maliyetler (debug)</h3>${lines.join("")}`;
+}
+
 function render() {
   const { phase, currentTask, pomodoroCount } = state.session;
   const { lumbermill, mine, villageCenter } = state.buildings;
@@ -217,6 +264,7 @@ function render() {
 
   updateTimer();
   renderGrid();
+  renderDebugPanel();
 }
 
 session.onChange(render);

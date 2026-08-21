@@ -1,5 +1,4 @@
 import type { GameState, Tile } from "./state";
-import { createInitialTiles } from "./state";
 
 // Merkeze Öklid mesafesinin karesi (sıralama için karekök almaya gerek yok).
 function distanceFromCenter(tile: Tile, center: number): number {
@@ -54,18 +53,4 @@ export function checkMapCleared(state: GameState): void {
     state.meta.mapCleared = true;
     state.buildings.villageCenter.unlocked = true;
   }
-}
-
-// Test amaçlı "Sıfırla" butonu için: grid'i, blueprint/inşa durumunu ve kaynakları başlangıç haline döndürür.
-export function resetGrid(state: GameState): void {
-  state.grid.tiles = createInitialTiles();
-  state.buildings.lumbermill.blueprintRevealed = false;
-  state.buildings.mine.blueprintRevealed = false;
-  state.buildings.lumbermill.level = 0;
-  state.buildings.mine.level = 0;
-  state.buildings.villageCenter.unlocked = false;
-  state.buildings.villageCenter.built = false;
-  state.resources.wood = 0;
-  state.resources.stone = 0;
-  state.meta.mapCleared = false;
 }

@@ -1,5 +1,6 @@
 import type { Decoration, GameState, ResourceTask } from "./state";
-import { revealNearestClosedTile, revealBlueprints, resetGrid, checkMapCleared } from "./grid";
+import { resetToNewGame } from "./state";
+import { revealNearestClosedTile, revealBlueprints, checkMapCleared } from "./grid";
 import {
   grantPomodoroYield,
   buildLumbermill as purchaseLumbermill,
@@ -7,6 +8,7 @@ import {
   buildVillageCenter as purchaseVillageCenter,
 } from "./resources";
 import { buildDecoration as purchaseDecoration } from "./decorations";
+import { saveState, clearSavedState } from "./persistence";
 
 // Bu isimlerdeki fazların hepsinin bir süresi var, "idle"ın yok — o yüzden ayrı bir tip.
 type TimedPhase = "pomodoro" | "shortBreak" | "longBreak";
@@ -36,6 +38,7 @@ export class SessionManager {
 
   constructor(state: GameState) {
     this.state = state;
+    this.resumeIfMidPomodoro();
   }
 
   setDebugMode(enabled: boolean) {
@@ -46,7 +49,24 @@ export class SessionManager {
     this.listeners.push(listener);
   }
 
+  // localStorage'dan yüklenen state pomodoro fazındaysa (sayfa kapalıyken zamanlayıcı kaybolmuş
+  // olabilir), kalan süreye göre zamanlayıcıyı yeniden kurar. Molalar zaten süresiz olduğu için
+  // (bkz. beginTimedPhase) burada bir şey yapmaya gerek yok, yüklenen faz olduğu gibi kalır.
+  private resumeIfMidPomodoro() {
+    const { phase, phaseStartedAt, phaseDurationMs } = this.state.session;
+    if (phase !== "pomodoro" || phaseStartedAt === null) return;
+
+    const remaining = phaseDurationMs - (Date.now() - phaseStartedAt);
+    if (remaining <= 0) {
+      // Sayfa kapalıyken pomodoro süresi zaten dolmuş — hemen tamamla.
+      setTimeout(() => this.onPhaseComplete(), 0);
+    } else {
+      this.timerId = setTimeout(() => this.onPhaseComplete(), remaining);
+    }
+  }
+
   private notify() {
+    saveState(this.state);
     for (const listener of this.listeners) listener(this.state);
   }
 
@@ -73,13 +93,6 @@ export class SessionManager {
     if (this.timerId !== null) clearTimeout(this.timerId);
   }
 
-  // Test amaçlı: sayacı ve grid'i (tile'lar + blueprint görünürlüğü) birlikte sıfırlar, fazı değiştirmez.
-  resetPomodoroCount() {
-    this.state.session.pomodoroCount = 0;
-    resetGrid(this.state);
-    this.notify();
-  }
-
   // Üçü de sadece longBreak sırasında anlamlı; yetersiz kaynakta veya max seviyede sessizce no-op olur.
   buildLumbermill() {
     if (this.state.session.phase !== "longBreak") return;
@@ -102,6 +115,18 @@ export class SessionManager {
   buildDecoration(type: Decoration) {
     if (this.state.session.phase !== "longBreak") return;
     purchaseDecoration(this.state, type);
+    this.notify();
+  }
+
+  // Kayıtlı localStorage state'ini tamamen siler ve her şeyi (kaynaklar, binalar, grid, session,
+  // meta) taze başlangıca döndürür — oyuncuya yönelik tek "baştan başlat" seçeneği bu.
+  newGame() {
+    if (this.timerId !== null) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
+    clearSavedState();
+    resetToNewGame(this.state);
     this.notify();
   }
 

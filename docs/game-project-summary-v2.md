@@ -210,3 +210,15 @@ Each implementation pass that changes what's described above gets a new entry he
 - Adjusted Level 1 building cost from 80/20 to 75/25 (see the implementation note in Section 4) — the original ratio made the first long break unable to afford anything.
 - Added the decoration system (fence/path/lamp) to fill the long breaks that have no affordable building purchase, without changing any building numbers (see "Decorations" in Section 4).
 - Fixed a decoration-placement bug: decorations were able to land on the Lumbermill/Mine blueprint tiles (`isSpecial`) because those tiles' underlying `state` can be `"cleared"` even while rendered in their blueprint/built color. Placement now explicitly excludes `isSpecial` tiles.
+
+### v2.002 (2026-08-21)
+- Implemented localStorage persistence (`src/persistence.ts`): every state change is saved as JSON (`meta.lastSavedAt` updated on each save), and the app loads the saved state on startup instead of always starting fresh.
+- Added `schemaVersion` to `GameState` (currently `1`) — a saved state with a mismatched or missing version is treated as invalid and discarded in favor of a fresh `createInitialState()`, so future data-model changes don't crash on old saves.
+- If a saved state is loaded mid-pomodoro, the countdown timer is reconstructed from the stored `phaseStartedAt`/`phaseDurationMs` rather than being lost — a pomodoro in progress when the tab was closed keeps counting down correctly after a reload (long/short breaks don't need this since they were already open-ended, see v1's break-duration note in Section 3b).
+- Added a separate "Yeni Oyun" button — clears the saved game and resets everything to a fresh start. Kept deliberately separate from the existing "Sıfırla" button, which only resets the pomodoro counter and grid for quick testing and is unrelated to the save file.
+- Added a debug-only cost panel (fixed to the top-right corner, only visible when the debug-mode checkbox is on) listing every buildable/purchasable thing and its cost, colored green/gray by current affordability — a planning/testing aid, not part of the intended player-facing UI.
+
+### v2.003 (2026-08-21)
+- Removed the "Sıfırla" button from v2.002: once "Yeni Oyun" existed, the two were nearly identical (both wiped resources/buildings/grid) and having three reset-ish buttons (Durdur / Sıfırla / Yeni Oyun) side by side was confusing. "Yeni Oyun" is now the only full-reset action; "Durdur" is unrelated (it only interrupts the current phase/timer, doesn't touch progress).
+- Debug mode's on/off state is now persisted too, in its own separate localStorage key — it was being reset to off on every page reload, which was annoying mid-testing. It's intentionally kept out of `GameState`/`schemaVersion` since it's a dev toggle, not game data.
+- Added explanatory `title` tooltips to "Durdur" and "Yeni Oyun" clarifying exactly what each does and doesn't touch.

@@ -24,6 +24,7 @@ export interface VillageCenter {
 }
 
 export interface GameState {
+  schemaVersion: number;
   resources: {
     wood: number;
     stone: number;
@@ -49,6 +50,10 @@ export interface GameState {
     lastSavedAt: number | null;
   };
 }
+
+// localStorage'daki kayıtlı state ile bu dosyadaki şekil uyuşmazsa (bkz. persistence.ts)
+// eski kaydı algılayıp sıfırlamak için kullanılıyor.
+export const CURRENT_SCHEMA_VERSION = 1;
 
 const GRID_SIZE = 5;
 const CENTER = Math.floor(GRID_SIZE / 2); // 2
@@ -76,6 +81,7 @@ export function createInitialTiles(): Tile[] {
 
 export function createInitialState(): GameState {
   return {
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     resources: {
       wood: 0,
       stone: 0,
@@ -101,4 +107,16 @@ export function createInitialState(): GameState {
       lastSavedAt: null,
     },
   };
+}
+
+// "Yeni Oyun" butonu için: aynı state referansını korurken (SessionManager/main.ts'in elindeki
+// nesne geçerli kalır) tüm alanları taze bir createInitialState() ile değiştirir.
+export function resetToNewGame(state: GameState): void {
+  const fresh = createInitialState();
+  state.schemaVersion = fresh.schemaVersion;
+  state.resources = fresh.resources;
+  state.buildings = fresh.buildings;
+  state.grid = fresh.grid;
+  state.session = fresh.session;
+  state.meta = fresh.meta;
 }

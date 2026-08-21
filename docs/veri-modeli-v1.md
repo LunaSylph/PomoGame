@@ -4,6 +4,7 @@
 
 ```json
 {
+  "schemaVersion": 1,
   "resources": {
     "wood": 0,
     "stone": 0
@@ -44,6 +45,7 @@
 
 ## Alan açıklamaları
 
+- **schemaVersion**: localStorage'daki kayıtla bu dosyanın şekli uyuşmuyorsa (veri modeli değiştiyse) eski kaydı algılayıp sıfırlamak için kullanılıyor (`persistence.ts`).
 - **resources**: Bölüm 4'teki iki kaynağın anlık miktarı. Bina bonusları burada değil, kaynak kazanma fonksiyonunda hesaplanır (state'e sadece sonuç yazılır).
 - **buildings.*.level**: 0 = henüz yok, 1-2 = mevcut seviye. `blueprintRevealed`, ilk pomodoro'dan sonra true olur (Bölüm 3a).
 - **buildings.villageCenter**: `unlocked`, harita tamamen açıldığında (Bölüm 5, 24. pomodoro) true olur. `built`, oyuncu uzun molada inşa ettiğinde true olur — ikisi ayrı, çünkü unlock ile build arasında oyuncu bekleyebilir.
@@ -51,7 +53,7 @@
 - **session.phase**: state machine'in kalbi — "idle" | "pomodoro" | "shortBreak" | "longBreak". UI, buna göre neyin gösterileceğine karar verir.
 - **session.currentTask**: kısa molada değiştirilen görev (Bölüm 3b — kaynak dönüştürme değil, görev değiştirme).
 - **phaseDurationMs**: debug/hızlandırma modu için bu değeri küçültmek yeterli (ör. test için 1500000 yerine 5000).
-- **meta.lastSavedAt**: localStorage kayıt/yükleme için (roadmap adım 6).
+- **meta.lastSavedAt**: her state değişikliğinde `persistence.ts`'in `saveState()` fonksiyonu tarafından güncelleniyor (roadmap adım 6, uygulandı).
 
 ## Not
 
