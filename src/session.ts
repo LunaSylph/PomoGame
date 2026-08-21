@@ -1,5 +1,12 @@
-import type { GameState, ResourceTask } from "./state";
-import { revealNearestClosedTile, revealBlueprints, resetGrid, buildNextBlueprint } from "./grid";
+import type { Decoration, GameState, ResourceTask } from "./state";
+import { revealNearestClosedTile, revealBlueprints, resetGrid, checkMapCleared } from "./grid";
+import {
+  grantPomodoroYield,
+  buildLumbermill as purchaseLumbermill,
+  buildMine as purchaseMine,
+  buildVillageCenter as purchaseVillageCenter,
+} from "./resources";
+import { buildDecoration as purchaseDecoration } from "./decorations";
 
 // Bu isimlerdeki fazların hepsinin bir süresi var, "idle"ın yok — o yüzden ayrı bir tip.
 type TimedPhase = "pomodoro" | "shortBreak" | "longBreak";
@@ -73,10 +80,28 @@ export class SessionManager {
     this.notify();
   }
 
-  // Sadece longBreak sırasında anlamlı — sağdaki blueprint önce, soldaki ikinci sırada inşa edilir.
-  build() {
+  // Üçü de sadece longBreak sırasında anlamlı; yetersiz kaynakta veya max seviyede sessizce no-op olur.
+  buildLumbermill() {
     if (this.state.session.phase !== "longBreak") return;
-    buildNextBlueprint(this.state);
+    purchaseLumbermill(this.state);
+    this.notify();
+  }
+
+  buildMine() {
+    if (this.state.session.phase !== "longBreak") return;
+    purchaseMine(this.state);
+    this.notify();
+  }
+
+  buildVillageCenter() {
+    if (this.state.session.phase !== "longBreak") return;
+    purchaseVillageCenter(this.state);
+    this.notify();
+  }
+
+  buildDecoration(type: Decoration) {
+    if (this.state.session.phase !== "longBreak") return;
+    purchaseDecoration(this.state, type);
     this.notify();
   }
 
@@ -112,12 +137,14 @@ export class SessionManager {
   }
 
   // Sadece pomodoro süresi dolunca çağrılır (molaların zamanlayıcısı yok).
-  // Sayaç +1, bir tile açılır, ilk pomodoro'da blueprint'ler açığa çıkar,
-  // 4'e bölünüyorsa longBreak, değilse shortBreak başlar.
+  // Sayaç +1, kaynak kazanılır, bir tile açılır, harita bittiyse Köy Merkezi açılır,
+  // ilk pomodoro'da blueprint'ler açığa çıkar, 4'e bölünüyorsa longBreak, değilse shortBreak başlar.
   private onPhaseComplete() {
     this.timerId = null;
     this.state.session.pomodoroCount += 1;
+    grantPomodoroYield(this.state);
     revealNearestClosedTile(this.state);
+    checkMapCleared(this.state);
     if (this.state.session.pomodoroCount === 1) {
       revealBlueprints(this.state);
     }

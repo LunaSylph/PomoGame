@@ -34,6 +34,15 @@ body {
 
 .tile {
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-decoration {
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #1a1a1a;
 }
 
 .tile-closed {
@@ -50,4 +59,9 @@ body {
 
 .tile-built {
   background: #ec4899;
+}
+
+.village-status {
+  color: #ec4899;
+  font-weight: bold;
 }

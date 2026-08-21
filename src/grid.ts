@@ -7,21 +7,23 @@ function distanceFromCenter(tile: Tile, center: number): number {
   return (row - center) ** 2 + (col - center) ** 2;
 }
 
-// Kapalı tile'lar arasından merkeze en yakın olanı açar. Harita merkezden dışa doğru,
-// yayılan bir leke gibi açılsın diye seçildi (rastgele sıçramasın) — bkz. kullanıcı talebi.
-// Eşit mesafedeki tile'lar arasında id'ye göre sabit bir sıralama kullanılıyor (deterministik).
-export function revealNearestClosedTile(state: GameState): void {
+// Tile'ları merkeze yakınlığa göre sıralar (eşit mesafede id'ye göre sabit/deterministik sıralama).
+// Hem tile açma hem dekorasyon yerleştirme "merkezden dışa doğru" aynı mantığı kullanıyor.
+export function sortByDistanceFromCenter(state: GameState, tiles: Tile[]): Tile[] {
   const center = Math.floor(state.grid.size / 2);
-  const closedTiles = state.grid.tiles.filter((tile) => tile.state === "closed");
-  if (closedTiles.length === 0) return;
-
-  closedTiles.sort((a, b) => {
+  return [...tiles].sort((a, b) => {
     const distDiff = distanceFromCenter(a, center) - distanceFromCenter(b, center);
     if (distDiff !== 0) return distDiff;
     return a.id.localeCompare(b.id);
   });
+}
 
-  closedTiles[0].state = "cleared";
+// Kapalı tile'lar arasından merkeze en yakın olanı açar. Harita merkezden dışa doğru,
+// yayılan bir leke gibi açılsın diye seçildi (rastgele sıçramasın) — bkz. kullanıcı talebi.
+export function revealNearestClosedTile(state: GameState): void {
+  const closedTiles = state.grid.tiles.filter((tile) => tile.state === "closed");
+  if (closedTiles.length === 0) return;
+  sortByDistanceFromCenter(state, closedTiles)[0].state = "cleared";
 }
 
 // İlk pomodoro'dan sonra Lumbermill/Mine inşaat parselleri haritada görünür olur (Bölüm 3a).
@@ -44,21 +46,26 @@ export function isTileBuilt(state: GameState, tile: Tile): boolean {
   return false;
 }
 
-// Placeholder inşa mantığı: gerçek kaynak bazlı seçim yerine önce sağdaki (Mine),
-// sonra soldaki (Lumbermill) blueprint inşa edilir — bkz. kullanıcı talebi, sonra değişecek.
-export function buildNextBlueprint(state: GameState): void {
-  if (state.buildings.mine.level === 0) {
-    state.buildings.mine.level = 1;
-  } else if (state.buildings.lumbermill.level === 0) {
-    state.buildings.lumbermill.level = 1;
+// Grid'deki tüm tile'lar açıldığında harita tamamlanmış sayılır, Köy Merkezi açılır (Bölüm 5).
+export function checkMapCleared(state: GameState): void {
+  if (state.meta.mapCleared) return;
+  const allCleared = state.grid.tiles.every((tile) => tile.state === "cleared");
+  if (allCleared) {
+    state.meta.mapCleared = true;
+    state.buildings.villageCenter.unlocked = true;
   }
 }
 
-// Test amaçlı "Sıfırla" butonu için: grid'i, blueprint görünürlüğünü ve inşa durumunu başlangıç haline döndürür.
+// Test amaçlı "Sıfırla" butonu için: grid'i, blueprint/inşa durumunu ve kaynakları başlangıç haline döndürür.
 export function resetGrid(state: GameState): void {
   state.grid.tiles = createInitialTiles();
   state.buildings.lumbermill.blueprintRevealed = false;
   state.buildings.mine.blueprintRevealed = false;
   state.buildings.lumbermill.level = 0;
   state.buildings.mine.level = 0;
+  state.buildings.villageCenter.unlocked = false;
+  state.buildings.villageCenter.built = false;
+  state.resources.wood = 0;
+  state.resources.stone = 0;
+  state.meta.mapCleared = false;
 }

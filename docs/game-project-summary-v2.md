@@ -4,6 +4,8 @@
 
 **Version note:** This is the second version of this document. Since the first version, the following has been finalized: the full resource economy (building costs, active-yield bonuses, the capstone "Village Center" building), the grid size (5x5, ~25 tiles), a correction to the short-break mechanic (it's a task switch, not a resource conversion), and a deliberate design decision that buildings will NOT produce resources passively/offline.
 
+**Sync note (v1 scaffolding, code-side):** This document has been re-synced to match the actual working implementation (`src/session.ts`, `src/resources.ts`, `src/grid.ts`). Section 4's numbers reflect what's in the code right now, not the original simulation output — the Level 1 building cost was already adjusted once (see the implementation note in Section 4), and the "Known balance issue" note in that section flags a real pacing problem the numbers still need to solve: not every long break currently has something affordable to build.
+
 ---
 
 ## 1. PROJECT PURPOSE AND CONTEXT
@@ -64,10 +66,11 @@ The goal is to avoid the classic idle-game loop of "click, collect points, spend
 ### Building costs
 | Building | Level 1 cost | Level 2 cost (additional) |
 |---|---|---|
-| Lumbermill | 80 wood + 20 stone (100 total) | 130 wood + 40 stone (170 total) |
-| Mine | 80 stone + 20 wood (100 total) | 130 stone + 40 wood (170 total) |
+| Lumbermill | 75 wood + 25 stone (100 total) | 130 wood + 40 stone (170 total) |
+| Mine | 75 stone + 25 wood (100 total) | 130 stone + 40 wood (170 total) |
 
-- Costs are deliberately asymmetric: each building primarily wants its own resource (an 80/20 ratio), with a smaller amount of the other resource required too. This ratio is kept constant across both levels so the player learns it once and reuses it.
+- Costs are deliberately asymmetric: each building primarily wants its own resource, with a smaller amount of the other resource required too.
+- **Implementation note (adjusted during v1 scaffolding):** Level 1 originally used an 80/20 ratio, but with a 25-unit base yield per pomodoro, 80/20 made the first longBreak (after 4 pomodoros) unable to afford *any* building even with the best possible resource split (3 of one resource + 1 of the other = 75/25, exactly 5 short of 80). Level 1 was changed to 75/25 so that split becomes exactly affordable. Level 2 keeps its original 130/40 ratio unchanged, since by that point (pomodoro ~20) resources are abundant and affordability isn't the concern.
 - v1 has only **2 levels** per building. A 3rd level risks pushing total playtime past the 24-pomodoro map-completion target, so it's deferred to v2.
 
 ### What buildings do: active yield boost
@@ -78,17 +81,21 @@ The goal is to avoid the classic idle-game loop of "click, collect points, spend
 
 ### Village Center (capstone building)
 - Unlocks once the entire map is cleared (pomodoro 24, all tiles revealed).
-- Recommended cost: **70 wood + 70 stone (140 total)**.
-- This figure is based on a simulation: under an alternating (wood-stone-wood-stone...) play strategy, both the Lumbermill and the Mine reach Level 2 by pomodoro 24, leaving roughly 160 unspent units (80 wood + 80 stone). Setting the cost somewhat below that surplus leaves room for players whose strategy isn't perfectly optimized to still be able to complete the Village Center.
+- Current implemented cost: **70 wood + 70 stone (140 total)**.
+- This number is carried over from the original pre-implementation simulation (which assumed the old 80/20 Level 1 cost). It hasn't been re-verified against the current 75/25 Level 1 cost and should be re-checked as part of the rebalancing pass below.
 
-### Simulation milestones (assuming an alternating strategy)
-| Pomodoro | Event | Remaining resources |
-|---|---|---|
-| 8 | Lumbermill and Mine both reach Level 1 | 20 wood, 80 stone |
-| 20 | Lumbermill and Mine both reach Level 2 | 10 wood, 10 stone |
-| 24 | Map fully cleared, Village Center becomes buildable | ~80 wood, ~80 stone (before spending) |
+### Known balance issue — RESOLVED via decorations (see below)
+Long breaks happen every 4th pomodoro: pomodoro 4, 8, 12, 16, 20, 24 — **six long breaks total**. The intent is that each one gives the player something meaningful to spend resources on. In the building economy alone that wasn't guaranteed: pomodoro 4 is only affordable with a deliberate resource split, and Level 2 (130/40 per building) isn't reachable until roughly pomodoro 20, leaving pomodoro 12 and 16 with no building purchase possible at all.
 
-**Important note:** These figures (+5/+10 bonuses, the 140-cost Village Center) come from a simulation (tested in Python) that assumes a perfectly alternating play strategy. Real player behavior will differ, so these numbers should be treated as a v1 draft and fine-tuned after playtesting.
+**Resolution:** rather than changing the building economy (75/25 → 130/40 → Village Center 70/70 all stay exactly as-is), a cheap, level-less **decoration** layer was added specifically to fill these gaps — see "Decorations" below. Because decoration costs (10–15 units) are far below a single pomodoro's 25-unit yield, at least one decoration is always affordable by any long break that follows at least one completed pomodoro, regardless of strategy — so no long break is ever truly "dead" anymore.
+
+### Decorations (fills empty long breaks, doesn't touch building costs)
+- Purely cosmetic, no gameplay effect, no levels — just repeatable small purchases so every long break has *something* to do even when no building tier is affordable yet.
+- Three types, each placed on one already-`cleared` tile (doesn't consume a new tile, doesn't change its `state` — adds to a separate per-tile `decoration` field). Max one decoration per tile.
+- Costs: **Fence** 15 wood · **Path** 15 stone · **Lamp** 10 wood + 10 stone.
+- Buyable only during long breaks, same rule as buildings.
+- Placement is automatic (not player-chosen): the first `cleared` tile without a decoration yet, using the same "nearest to center, deterministic tie-break" ordering as tile-opening. If no undecorated `cleared` tile exists, the purchase button is disabled.
+- No upgrade path — buying the same type again just places another one on the next available tile.
 
 ---
 
@@ -163,7 +170,7 @@ The goal is to avoid the classic idle-game loop of "click, collect points, spend
 1. A concrete wireframe/mockup of the blueprints and buildings hasn't been drawn yet (their position — "fixed, adjacent to start" — is decided, but the exact visual layout isn't).
 2. A concrete wireframe/mockup of the character and tile grid hasn't been drawn yet.
 3. A color palette and typography system haven't been chosen yet (will draw from the Townscaper/Alba/Dorfromantik references).
-4. The economy numbers (+5/+10 bonuses, the 140-cost Village Center) haven't been validated through playtesting and may need tuning.
+4. The "empty long break" gap is resolved via decorations (Section 4), without touching building costs. The +5/+10 bonuses and the 140-cost Village Center are still unvalidated by playtesting.
 5. A state diagram / flowchart of the tile-grid + character + pomodoro + break flow hasn't been drawn yet.
 6. Whether the grid stays at exactly 5x5 or moves to 6x6 (currently working from 5x5, with the whole economy built around it).
 7. The v2 scope (roadmap) is still only conceptual, not detailed.
@@ -191,3 +198,15 @@ Continuation points that were planned in a previous chat and are now ready to mo
 - Choosing the color palette and typography
 
 The AI reading this file can ask the user which point they'd like to continue from and pick up where things left off.
+
+---
+
+## 12. CHANGELOG
+
+Each implementation pass that changes what's described above gets a new entry here (v2.001, v2.002, ...), newest last. This is a log of what changed and why — the sections above stay the source of truth for current behavior.
+
+### v2.001 (2026-08-21)
+- Implemented the full resource/building economy from Section 4 in code (`src/resources.ts`, `src/session.ts`): pomodoro yield, Lumbermill/Mine purchases, Village Center unlock + purchase.
+- Adjusted Level 1 building cost from 80/20 to 75/25 (see the implementation note in Section 4) — the original ratio made the first long break unable to afford anything.
+- Added the decoration system (fence/path/lamp) to fill the long breaks that have no affordable building purchase, without changing any building numbers (see "Decorations" in Section 4).
+- Fixed a decoration-placement bug: decorations were able to land on the Lumbermill/Mine blueprint tiles (`isSpecial`) because those tiles' underlying `state` can be `"cleared"` even while rendered in their blueprint/built color. Placement now explicitly excludes `isSpecial` tiles.

@@ -4,11 +4,13 @@
 export type TilePhase = "closed" | "cleared";
 export type SessionPhase = "idle" | "pomodoro" | "shortBreak" | "longBreak";
 export type ResourceTask = "wood" | "stone";
+export type Decoration = "fence" | "path" | "lamp";
 
 export interface Tile {
   id: string; // "row-col", örn. "2-2"
   state: TilePhase;
   isSpecial: boolean; // true: Lumbermill/Mine blueprint konumu
+  decoration: Decoration | null; // sadece "cleared" tile'lara yerleşir, tile başına en fazla 1
 }
 
 export interface BuildingLevel {
@@ -65,6 +67,7 @@ export function createInitialTiles(): Tile[] {
         id,
         state: isCenter ? "cleared" : "closed",
         isSpecial: SPECIAL_TILE_IDS.has(id),
+        decoration: null,
       });
     }
   }
