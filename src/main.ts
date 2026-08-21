@@ -1,6 +1,7 @@
 import "./style.css";
 import { createInitialState } from "./state";
 import { SessionManager } from "./session";
+import { isTileBuilt } from "./grid";
 
 // İskelet: faz/zamanlayıcı mantığı + tile grid'in placeholder render'ı için minimal butonlar.
 // Kaynak sayacı, bina inşası yok — bunlar sıradaki adımlar.
@@ -52,8 +53,7 @@ switchTaskBtn.addEventListener("click", () => {
 });
 
 buildBtn.addEventListener("click", () => {
-  // Bina mantığı henüz yok — sıradaki adımda eklenecek.
-  console.log("İnşaa Et tıklandı (henüz bina mantığı yok)");
+  session.build();
 });
 
 resetBtn.addEventListener("click", () => {
@@ -85,11 +85,26 @@ function renderGrid() {
 
   gridEl.innerHTML = state.grid.tiles
     .map((tile) => {
-      const isBlueprint = tile.isSpecial && blueprintsRevealed;
-      const cssClass = isBlueprint ? "tile-blueprint" : tile.state === "cleared" ? "tile-cleared" : "tile-closed";
+      let cssClass: string;
+      if (tile.isSpecial && isTileBuilt(state, tile)) {
+        cssClass = "tile-built"; // inşa edilmiş (pembe)
+      } else if (tile.isSpecial && blueprintsRevealed) {
+        cssClass = "tile-blueprint"; // görünür ama henüz inşa edilmemiş (sarı)
+      } else if (tile.state === "cleared") {
+        cssClass = "tile-cleared";
+      } else {
+        cssClass = "tile-closed";
+      }
       return `<div class="tile ${cssClass}" title="${tile.id}"></div>`;
     })
     .join("");
+}
+
+// Süre yazısının rengi: pomodoro'da varsayılan (beyaz), shortBreak'te sarı, longBreak'te pembe.
+function timerColorFor(phase: string): string {
+  if (phase === "shortBreak") return "#ffb300";
+  if (phase === "longBreak") return "#ec4899";
+  return "";
 }
 
 function render() {
@@ -100,6 +115,7 @@ function render() {
   switchTaskBtn.disabled = phase !== "shortBreak" && phase !== "longBreak";
   buildBtn.style.display = phase === "longBreak" ? "inline-block" : "none";
   stopBtn.disabled = phase === "idle";
+  timerEl.style.color = timerColorFor(phase);
   updateTimer();
   renderGrid();
 }

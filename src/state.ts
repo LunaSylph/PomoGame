@@ -55,7 +55,7 @@ const CENTER = Math.floor(GRID_SIZE / 2); // 2
 // bkz. docs/game-project-summary-v2.md Bölüm 9, madde 1) — geçici olarak sol ve sağ komşu seçildi.
 const SPECIAL_TILE_IDS = new Set([`${CENTER}-${CENTER - 1}`, `${CENTER}-${CENTER + 1}`]);
 
-function createInitialTiles(): Tile[] {
+export function createInitialTiles(): Tile[] {
   const tiles: Tile[] = [];
   for (let row = 0; row < GRID_SIZE; row++) {
     for (let col = 0; col < GRID_SIZE; col++) {

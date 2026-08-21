@@ -1,5 +1,5 @@
 import type { GameState, ResourceTask } from "./state";
-import { revealNearestClosedTile, revealBlueprints } from "./grid";
+import { revealNearestClosedTile, revealBlueprints, resetGrid, buildNextBlueprint } from "./grid";
 
 // Bu isimlerdeki fazların hepsinin bir süresi var, "idle"ın yok — o yüzden ayrı bir tip.
 type TimedPhase = "pomodoro" | "shortBreak" | "longBreak";
@@ -66,9 +66,17 @@ export class SessionManager {
     if (this.timerId !== null) clearTimeout(this.timerId);
   }
 
-  // Test amaçlı: sadece sayacı sıfırlar, fazı değiştirmez.
+  // Test amaçlı: sayacı ve grid'i (tile'lar + blueprint görünürlüğü) birlikte sıfırlar, fazı değiştirmez.
   resetPomodoroCount() {
     this.state.session.pomodoroCount = 0;
+    resetGrid(this.state);
+    this.notify();
+  }
+
+  // Sadece longBreak sırasında anlamlı — sağdaki blueprint önce, soldaki ikinci sırada inşa edilir.
+  build() {
+    if (this.state.session.phase !== "longBreak") return;
+    buildNextBlueprint(this.state);
     this.notify();
   }
 
