@@ -41,6 +41,7 @@ The goal is to avoid the classic idle-game loop of "click, collect points, spend
 - A growth/change animation plays quietly in the PiP window.
 - **Correction (a decision clarified in v1):** there is NO resource-conversion/exchange mechanic during the short break. The only interaction available here is **switching the character's task for the next pomodoro** (wood gathering ↔ stone gathering). This is optional, never required.
 - No mandatory task. The goal is to not disrupt the break.
+- **Implementation note (added during v1 scaffolding):** break duration is not enforced — the break never auto-ends, the user always ends it manually by starting the next pomodoro. `phaseDurationMs` is still tracked in state during breaks as a target reference (not an automatic cutoff), intended for a future "break ending soon" notification.
 
 ### c) Long Break (15-30 min, generally every 4th pomodoro)
 - The user is more likely to be at the screen, so there's a lightly active interaction layer here.

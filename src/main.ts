@@ -2,8 +2,8 @@ import "./style.css";
 import { createInitialState } from "./state";
 import { SessionManager } from "./session";
 
-// İskelet: sadece faz/zamanlayıcı mantığını test etmek için minimal butonlar.
-// Kaynak kazanımı, tile açma, bina mantığı yok — bunlar sıradaki adımlar.
+// İskelet: faz/zamanlayıcı mantığı + tile grid'in placeholder render'ı için minimal butonlar.
+// Kaynak sayacı, bina inşası yok — bunlar sıradaki adımlar.
 const state = createInitialState();
 const session = new SessionManager(state);
 
@@ -19,6 +19,7 @@ app.innerHTML = `
     </p>
     <div id="timer" class="timer-display">00:00</div>
     <p id="status"></p>
+    <div id="grid" class="grid"></div>
     <button id="start-btn">Başlat</button>
     <button id="switch-task-btn">Görev Değiştir</button>
     <button id="build-btn">İnşaa Et</button>
@@ -28,6 +29,7 @@ app.innerHTML = `
 `;
 
 const timerEl = document.querySelector<HTMLDivElement>("#timer")!;
+const gridEl = document.querySelector<HTMLDivElement>("#grid")!;
 const statusEl = document.querySelector<HTMLParagraphElement>("#status")!;
 const startBtn = document.querySelector<HTMLButtonElement>("#start-btn")!;
 const switchTaskBtn = document.querySelector<HTMLButtonElement>("#switch-task-btn")!;
@@ -76,6 +78,20 @@ function updateTimer() {
   timerEl.textContent = formatElapsed(elapsedMs);
 }
 
+function renderGrid() {
+  // İki blueprint tile'ı aynı anda açığa çıkıyor (bkz. grid.ts revealBlueprints),
+  // o yüzden hangisine bakılırsa bakılsın aynı sonucu verir.
+  const blueprintsRevealed = state.buildings.lumbermill.blueprintRevealed;
+
+  gridEl.innerHTML = state.grid.tiles
+    .map((tile) => {
+      const isBlueprint = tile.isSpecial && blueprintsRevealed;
+      const cssClass = isBlueprint ? "tile-blueprint" : tile.state === "cleared" ? "tile-cleared" : "tile-closed";
+      return `<div class="tile ${cssClass}" title="${tile.id}"></div>`;
+    })
+    .join("");
+}
+
 function render() {
   const { phase, currentTask, pomodoroCount } = state.session;
   statusEl.textContent = `Faz: ${phase} · Görev: ${currentTask} · Tamamlanan pomodoro: ${pomodoroCount}`;
@@ -85,6 +101,7 @@ function render() {
   buildBtn.style.display = phase === "longBreak" ? "inline-block" : "none";
   stopBtn.disabled = phase === "idle";
   updateTimer();
+  renderGrid();
 }
 
 session.onChange(render);

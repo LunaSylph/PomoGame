@@ -22,3 +22,28 @@ body {
   font-variant-numeric: tabular-nums;
   margin: 0.5rem 0;
 }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 44px);
+  grid-template-rows: repeat(5, 44px);
+  gap: 4px;
+  margin: 1rem auto;
+  justify-content: center;
+}
+
+.tile {
+  border-radius: 4px;
+}
+
+.tile-closed {
+  background: #6b6b6b;
+}
+
+.tile-cleared {
+  background: #6fbf73;
+}
+
+.tile-blueprint {
+  background: #ffb300;
+}

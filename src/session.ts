@@ -1,4 +1,5 @@
 import type { GameState, ResourceTask } from "./state";
+import { revealNearestClosedTile, revealBlueprints } from "./grid";
 
 // Bu isimlerdeki fazların hepsinin bir süresi var, "idle"ın yok — o yüzden ayrı bir tip.
 type TimedPhase = "pomodoro" | "shortBreak" | "longBreak";
@@ -103,10 +104,15 @@ export class SessionManager {
   }
 
   // Sadece pomodoro süresi dolunca çağrılır (molaların zamanlayıcısı yok).
-  // Sayaç +1, 4'e bölünüyorsa longBreak, değilse shortBreak başlar.
+  // Sayaç +1, bir tile açılır, ilk pomodoro'da blueprint'ler açığa çıkar,
+  // 4'e bölünüyorsa longBreak, değilse shortBreak başlar.
   private onPhaseComplete() {
     this.timerId = null;
     this.state.session.pomodoroCount += 1;
+    revealNearestClosedTile(this.state);
+    if (this.state.session.pomodoroCount === 1) {
+      revealBlueprints(this.state);
+    }
     const nextPhase: TimedPhase = this.state.session.pomodoroCount % 4 === 0 ? "longBreak" : "shortBreak";
     this.beginTimedPhase(nextPhase);
   }
