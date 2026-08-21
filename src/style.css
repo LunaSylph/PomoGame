@@ -15,3 +15,10 @@ body {
   text-align: center;
   padding: 2rem;
 }
+
+.timer-display {
+  font-size: 4rem;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  margin: 0.5rem 0;
+}
