@@ -71,6 +71,17 @@ export class SessionManager {
     this.notify();
   }
 
+  // Herhangi bir fazdan çağrılabilir: aktif zamanlayıcıyı durdurur ve idle'a döner.
+  stopToIdle() {
+    if (this.timerId !== null) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
+    this.state.session.phase = "idle";
+    this.state.session.phaseStartedAt = null;
+    this.notify();
+  }
+
   private beginTimedPhase(phase: TimedPhase) {
     const duration = this.durations()[phase];
     this.state.session.phase = phase;

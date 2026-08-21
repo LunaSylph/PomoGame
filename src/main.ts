@@ -22,6 +22,7 @@ app.innerHTML = `
     <button id="start-btn">Başlat</button>
     <button id="switch-task-btn">Görev Değiştir</button>
     <button id="build-btn">İnşaa Et</button>
+    <button id="stop-btn">Durdur</button>
     <button id="reset-btn">Sıfırla</button>
   </div>
 `;
@@ -31,6 +32,7 @@ const statusEl = document.querySelector<HTMLParagraphElement>("#status")!;
 const startBtn = document.querySelector<HTMLButtonElement>("#start-btn")!;
 const switchTaskBtn = document.querySelector<HTMLButtonElement>("#switch-task-btn")!;
 const buildBtn = document.querySelector<HTMLButtonElement>("#build-btn")!;
+const stopBtn = document.querySelector<HTMLButtonElement>("#stop-btn")!;
 const resetBtn = document.querySelector<HTMLButtonElement>("#reset-btn")!;
 const debugToggle = document.querySelector<HTMLInputElement>("#debug-toggle")!;
 
@@ -56,6 +58,10 @@ resetBtn.addEventListener("click", () => {
   session.resetPomodoroCount();
 });
 
+stopBtn.addEventListener("click", () => {
+  session.stopToIdle();
+});
+
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -77,6 +83,7 @@ function render() {
   startBtn.disabled = phase === "pomodoro";
   switchTaskBtn.disabled = phase !== "shortBreak" && phase !== "longBreak";
   buildBtn.style.display = phase === "longBreak" ? "inline-block" : "none";
+  stopBtn.disabled = phase === "idle";
   updateTimer();
 }
 
